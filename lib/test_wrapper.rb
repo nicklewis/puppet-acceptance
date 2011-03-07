@@ -1,3 +1,6 @@
+class TestNotApplicableError < StandardError
+end
+
 class TestWrapper
   require 'lib/test_wrapper/host'
   require 'lib/gen_answer_files'
@@ -26,6 +29,9 @@ class TestWrapper
         rescue Test::Unit::AssertionFailedError => e
           @test_status = :fail
           @exception   = e
+        rescue TestNotApplicableError => e
+          @test_status = :skipp
+          @exception = e
         rescue StandardError, ScriptError => e
           @test_status = :error
           @exception   = e
@@ -48,14 +54,19 @@ class TestWrapper
   def agents
     hosts 'agent'
   end
+  def agent
+    agents.first
+  end
+  def masters
+    hosts 'master'
+  end
   def master
-    masters = hosts 'master'
-    fail "There must be exactly one master" unless masters.length == 1
     masters.first
   end
+  def dashboards
+    hosts 'dashboard'
+  end
   def dashboard
-    dashboards = hosts 'dashboard'
-    fail "There must be exactly one dashboard" unless dashboards.length == 1
     dashboards.first
   end
   #
@@ -185,6 +196,22 @@ class TestWrapper
     else
       on host,puppet_agent(arg)
     end
+  end
+
+  def requires_at_least(n, role)
+    raise TestNotApplicableError.new unless 
+    (case(role)
+       when *[:master, :masters]
+         masters
+       when *[:agent, :agents]
+         agents
+       when *[:dashboard, :dashboards]
+         dashboards
+     end.length >= n)
+  end
+
+  def requires(role)
+    requires_at_least 1, role
   end
 
   def time_sync

@@ -1,6 +1,6 @@
 test_name "Issue5318" do
-
-  agent = agents.first
+  requires :master
+  requires_at_least 3, :agents
 
   step "Query Puppet master for filetimeout value" do
     on master,"puppet --configprint all | grep filetimeout"
